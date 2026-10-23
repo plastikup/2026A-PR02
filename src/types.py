@@ -1,0 +1,1 @@
+Dataset = tuple[tuple[float, ...], ...]
