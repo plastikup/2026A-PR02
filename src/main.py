@@ -1,3 +1,6 @@
+from training.train import train
+
+
 def bootstrap():
 	gray_bg, cyan, reset = '\x1b[100m', '\x1b[96m', '\x1b[0m'
 
@@ -8,7 +11,7 @@ def bootstrap():
 
 	option = input(f'{cyan}Entrez le numéro, ou rien mettre pour 2: {reset}')
 
-	if option == '1': print('got 1')
+	if option == '1': train()
 	elif option == '2' or option == '': print('got 2')
 
 	print('exiting')
