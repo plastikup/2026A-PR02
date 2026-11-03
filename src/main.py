@@ -1,3 +1,4 @@
+from interface.ui import ui
 from training.train import train
 
 
@@ -12,7 +13,7 @@ def bootstrap():
 	option = input(f'{cyan}Entrez le numéro, ou rien mettre pour 2: {reset}')
 
 	if option == '1': train()
-	elif option == '2' or option == '': print('got 2')
+	elif option == '2' or option == '': ui()
 
 	print('exiting')
 
