@@ -1,9 +1,11 @@
+import os
 from math import dist
 from typing import Literal, get_args
+from training.datasetManager import DatasetManager
 
 import pygame
 
-ScenesNames = Literal['splashscreen', 'main', 'sandbox']
+ScenesNames = Literal['splashscreen', 'main', 'sandbox', "view_dataset"]
 
 class Scenes:
 	def __init__(self):
@@ -16,12 +18,16 @@ class Scenes:
 			'splashscreen': self.__splashscreen,
 			'main': self.__main,
 			'sandbox': self.__sandbox,
+			"view_dataset": self.__view_dataset
+
 		}
 		self.scenes_data = {
 			'sandbox': {
 				'MIN_PIXELS_DISTANCE': 4,
 				'drawn_pixels': []
 			},
+			"view_dataset": {
+			}
 		}
 
 	@property
@@ -78,3 +84,42 @@ class Scenes:
 			window.fill((255, 255, 255))
 			for line in self.scenes_data['sandbox']['drawn_pixels']:
 				if len(line) > 2: pygame.draw.lines(window, (0, 0, 0), False, line, width=6)
+
+	def __view_dataset(self, window: pygame.Surface, events: list[pygame.event.Event]):
+		'''Viewing the dataset for testing purposes with LEFT/RIGHT arrow keys.'''
+		data = self.scenes_data['view_dataset']
+		Screen_size = 30
+		refresh_screen = False
+
+		#Préparation du montrage du Data
+		if "dataset" not in data:
+			source = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+			dataset, indice = DatasetManager(os.path.join(source, 'data', 'dataset.csv')).fetch()
+			data["dataset"] = dataset
+			data["indice"] = indice
+			data["posligne"] = 0
+
+		#Interface Humain pour voir le data de chaque ligne
+		Keys = pygame.key.get_pressed()
+		if Keys[pygame.K_RIGHT]:
+			data["posligne"] = data["posligne"] +1 % len(data["dataset"])
+			refresh_screen = True
+		if Keys[pygame.K_LEFT]:
+			data["posligne"] = data["posligne"] -1 % len(data["dataset"])
+			refresh_screen = True
+
+		#Dessiner et rafraichissement d'écran
+		if refresh_screen:
+			window.fill((255, 255, 255))
+
+			pixeldraw = data["dataset"][data["posligne"]]
+			Petit_ecran = pygame.Surface((Screen_size, Screen_size)) #Dessin d'écran selon les valeurs dans le Data
+
+			#Dessin du Data
+			for i, valeur in enumerate(pixeldraw):
+				couleur = valeur if valeur == 0 else 255
+				Petit_ecran.set_at((i % Screen_size, i // Screen_size), (couleur,couleur,couleur))
+
+			#Aggrandir l'écran pour mieux voir
+			Grandeur_ecran = min(window.get_size())// Screen_size
+			window.blit(pygame.transform.scale(Petit_ecran, (Screen_size*Grandeur_ecran, Screen_size*Grandeur_ecran)),(0,0))
