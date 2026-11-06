@@ -1,6 +1,7 @@
 import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import MinMaxScaler
 
 from constants import DATASET_PATH, TRAINED_MODEL_PATH
 from model.datasetManager import DatasetManager
@@ -15,6 +16,11 @@ def train() -> None:
         dataset, indices, test_size=0.2,
         stratify=indices, random_state=0, shuffle=True
     )
+
+    print('Scaling dataset...')
+    scaler = MinMaxScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_test = scaler.transform(X_test)
 
     print('Training model...')
     clf = MLPClassifier(
