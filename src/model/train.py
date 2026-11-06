@@ -1,10 +1,6 @@
-import os
-
 import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import MinMaxScaler
 
 from constants import DATASET_PATH, TRAINED_MODEL_PATH
 from model.datasetManager import DatasetManager
@@ -17,17 +13,18 @@ def train() -> None:
     print('Splitting dataset...')
     X_train, X_test, y_train, y_test = train_test_split(
         dataset, indices, test_size=0.2,
-        stratify=indices, random_state=42, shuffle=True
+        stratify=indices, random_state=0, shuffle=True
     )
 
     print('Training model...')
     clf = MLPClassifier(
         hidden_layer_sizes=(512, 256),
-        activation='relu',
+        activation='tanh',
         solver='adam',
         max_iter=500,
         early_stopping=True, # Prevents overfitting
-        random_state=42
+        random_state=0,
+        shuffle=True,
     )
     clf.fit(X_train, y_train)
 
