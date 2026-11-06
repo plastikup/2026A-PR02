@@ -1,5 +1,5 @@
 from interface.ui import ui
-from training.train import train
+from model.train import train
 
 
 def bootstrap():

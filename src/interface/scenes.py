@@ -1,9 +1,12 @@
 from math import dist
-from typing import Literal, get_args
+from typing import get_args
 
 import pygame
 
-ScenesNames = Literal['splashscreen', 'main', 'sandbox']
+from customTypes import ScenesNames
+from model.predict import predict
+from utils.coordsToMatrix import coords_to_matrix
+
 
 class Scenes:
 	def __init__(self):
@@ -19,7 +22,7 @@ class Scenes:
 		}
 		self.scenes_data = {
 			'sandbox': {
-				'MIN_PIXELS_DISTANCE': 4,
+				'MIN_PIXELS_DISTANCE': 1,
 				'drawn_pixels': []
 			},
 		}
@@ -67,8 +70,12 @@ class Scenes:
 
 		# submitting
 		elif any(e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN for e in events):
-			# TODO: bridge draw pixels with ../classification/ logic
 			print(self.scenes_data['sandbox']['drawn_pixels'])
+			matrix = coords_to_matrix(self.scenes_data['sandbox']['drawn_pixels'], window.get_size(), (30, 30))
+			# print('\n'.join(' '.join(str(cell) for cell in line) for line in matrix))
+			prediction = predict([[val for line in matrix for val in line]])
+			# prediction = predict(matrix)
+			print(prediction)
 
 			self.scenes_data['sandbox']['drawn_pixels'].clear()
 			refresh_screen = True
