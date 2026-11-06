@@ -11,7 +11,7 @@ def ui() -> None:
 
 	# Setup the scenes manager
 	scenes = Scenes()
-	scenes.active_scene = 'sandbox' # for testing purposes only
+	scenes.active_scene = 'view_dataset' # for testing purposes only, other test is: view_dataset
 
 	# Main loop
 	while True:

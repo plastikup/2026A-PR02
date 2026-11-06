@@ -6,14 +6,13 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 
-from constants import TRAINED_MODEL_PATH
+from constants import DATASET_PATH, TRAINED_MODEL_PATH
 from model.datasetManager import DatasetManager
 
 
 def train() -> None:
     print('Loading dataset...')
-    datasetPath = os.path.join('data', 'dataset.csv')
-    dataset, indices = DatasetManager(datasetPath).fetch()
+    dataset, indices = DatasetManager(DATASET_PATH).fetch()
 
     print('Splitting dataset...')
     X_train, X_test, y_train, y_test = train_test_split(
