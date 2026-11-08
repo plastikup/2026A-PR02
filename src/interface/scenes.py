@@ -1,4 +1,4 @@
-from math import dist
+import math
 from typing import get_args
 
 import pygame
@@ -8,6 +8,21 @@ from customTypes import ScenesNames
 from model.datasetManager import DatasetManager
 from model.predict import predict
 from utils.coordsToMatrix import coords_to_matrix
+
+
+def generate_fake_pencil_surface(size: int) -> pygame.Surface:
+	'''
+	Generate a fake pencil surface with a fading effect
+	'''
+	pencil = pygame.Surface((size, size), pygame.SRCALPHA)
+	center = size // 2
+	for j in range(size):
+		for i in range(size):
+			dist = math.dist((i, j), (center, center))
+			normalized_dist = min(dist / center, 1)
+			alpha = 255 - round(normalized_dist * 255)
+			pencil.set_at((i, j), (0, 0, 0, alpha))
+	return pencil
 
 
 class Scenes:
@@ -27,7 +42,8 @@ class Scenes:
 		self.scenes_data = {
 			'sandbox': {
 				'MIN_PIXELS_DISTANCE': 1,
-				'drawn_pixels': []
+				'drawn_pixels': [],
+				'pencil': generate_fake_pencil_surface(16)
 			},
 			"view_dataset": {
 			}
@@ -70,7 +86,7 @@ class Scenes:
 			line = self.scenes_data['sandbox']['drawn_pixels'][-1]
 
 			# register the pixel if the distance is greater than the minimum required
-			if not len(line) or dist(pygame.mouse.get_pos(), line[-1]) > self.scenes_data['sandbox']['MIN_PIXELS_DISTANCE']:
+			if not len(line) or math.dist(pygame.mouse.get_pos(), line[-1]) > self.scenes_data['sandbox']['MIN_PIXELS_DISTANCE']:
 				line.append(pygame.mouse.get_pos())
 				refresh_screen = True
 
@@ -79,7 +95,7 @@ class Scenes:
 			print(self.scenes_data['sandbox']['drawn_pixels'])
 			matrix = coords_to_matrix(self.scenes_data['sandbox']['drawn_pixels'], window.get_size(), (30, 30))
 			# print('\n'.join(' '.join(str(cell) for cell in line) for line in matrix))
-			prediction = predict([[val for line in matrix for val in line]])
+			prediction = predict([val for line in matrix for val in line])
 			# prediction = predict(matrix)
 			print(prediction)
 
@@ -88,9 +104,10 @@ class Scenes:
 
 		# drawing
 		if refresh_screen:
-			window.fill((255, 255, 255))
+			window.fill((255, 255, 255, 255))
 			for line in self.scenes_data['sandbox']['drawn_pixels']:
-				if len(line) > 2: pygame.draw.lines(window, (0, 0, 0), False, line, width=6)
+				for coords in line:
+					window.blit(self.scenes_data['sandbox']['pencil'], coords)
 
 	def __view_dataset(self, window: pygame.Surface, events: list[pygame.event.Event]):
 		'''Viewing the dataset for testing purposes with LEFT/RIGHT arrow keys.'''
