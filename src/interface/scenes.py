@@ -6,8 +6,10 @@ import pygame
 from constants import DATASET_PATH
 from customTypes import ScenesNames
 from model.datasetManager import DatasetManager
-from model.predict import predict
+from model.predict import PredictionPipeline
 from utils.coordsToMatrix import coords_to_matrix
+
+predictionPipeline = PredictionPipeline()
 
 
 def generate_fake_pencil_surface(size: int) -> pygame.Surface:
@@ -92,11 +94,8 @@ class Scenes:
 
 		# submitting
 		elif any(e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN for e in events):
-			print(self.scenes_data['sandbox']['drawn_pixels'])
-			matrix = coords_to_matrix(self.scenes_data['sandbox']['drawn_pixels'], window.get_size(), (30, 30))
-			# print('\n'.join(' '.join(str(cell) for cell in line) for line in matrix))
-			prediction = predict([val for line in matrix for val in line])
-			# prediction = predict(matrix)
+			transparency_matrix = pygame.surfarray.array_alpha(window)
+			prediction = predictionPipeline.predict(transparency_matrix)
 			print(prediction)
 
 			self.scenes_data['sandbox']['drawn_pixels'].clear()
