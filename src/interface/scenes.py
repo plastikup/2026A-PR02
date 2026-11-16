@@ -96,7 +96,7 @@ class Scenes:
 			rgb_matrix = pygame.surfarray.pixels3d(window)
 			prediction = predictionPipeline.predict(rgb_matrix)
 			del rgb_matrix # pygame locks surface unless explicitly deleting reference
-			print('ABCDEFGHIJKLMNOPQRSTUVWXYZ?'[prediction[0]])
+			print('ABCDEFGHIJKLMNOPQRSTUVWXYZ'[prediction[0]-1])
 			# data = predictionPipeline.predict(rgb_matrix)
 			# del rgb_matrix # pygame locks surface unless explicitly deleting reference
 			# with open('out.txt', 'w') as f: f.write('\n'.join(' '.join(str(round(num, 1)) for num in line) for line in data))
