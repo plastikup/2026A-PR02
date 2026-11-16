@@ -7,7 +7,6 @@ from constants import DATASET_PATH
 from customTypes import ScenesNames
 from model.datasetManager import DatasetManager
 from model.predict import PredictionPipeline
-from utils.coordsToMatrix import coords_to_matrix
 
 predictionPipeline = PredictionPipeline()
 
@@ -45,7 +44,7 @@ class Scenes:
 			'sandbox': {
 				'MIN_PIXELS_DISTANCE': 1,
 				'drawn_pixels': [],
-				'pencil': generate_fake_pencil_surface(16)
+				'pencil': generate_fake_pencil_surface(4)
 			},
 			"view_dataset": {
 			}
@@ -94,9 +93,16 @@ class Scenes:
 
 		# submitting
 		elif any(e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN for e in events):
-			transparency_matrix = pygame.surfarray.array_alpha(window)
-			prediction = predictionPipeline.predict(transparency_matrix)
-			print(prediction)
+			rgb_matrix = pygame.surfarray.pixels3d(window)
+			prediction = predictionPipeline.predict(rgb_matrix)
+			del rgb_matrix # pygame locks surface unless explicitly deleting reference
+			print('ABCDEFGHIJKLMNOPQRSTUVWXYZ?'[prediction[0]])
+			# data = predictionPipeline.predict(rgb_matrix)
+			# del rgb_matrix # pygame locks surface unless explicitly deleting reference
+			# with open('out.txt', 'w') as f: f.write('\n'.join(' '.join(str(round(num, 1)) for num in line) for line in data))
+			# self.scenes_data['view_dataset']['dataset'] = data
+			# self.scenes_data['view_dataset']['posligne'] = 0
+			# self.__view_dataset(window, events)
 
 			self.scenes_data['sandbox']['drawn_pixels'].clear()
 			refresh_screen = True
