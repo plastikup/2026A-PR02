@@ -31,6 +31,7 @@ class Scenes:
 	def __init__(self):
 		self._scene = 'splashscreen'
 		self._switched_scene = True
+		self.history = []
 		self._globals = {
 			'previously_mousedown': False
 		}
@@ -45,7 +46,16 @@ class Scenes:
 			'sandbox': {
 				'MIN_PIXELS_DISTANCE': 1,
 				'drawn_pixels': [],
-				'pencil': generate_fake_pencil_surface(16)
+				'pencil': generate_fake_pencil_surface(5)
+			},
+			"view_dataset": {
+			}
+		}
+		self.scenes_main = {
+			'main': {
+				'MIN_PIXELS_DISTANCE': 1,
+				'drawn_pixels': [],
+				'pencil': generate_fake_pencil_surface(50)
 			},
 			"view_dataset": {
 			}
@@ -66,13 +76,161 @@ class Scenes:
 
 		# clear ephemeral flags and update globals
 		self._switched_scene = False
-		self._globals['previously_mousedown'] = pygame.mouse.get_pressed()[0]
+	
+		#self._globals['previously_mousedown'] = pygame.mouse.get_pressed()[0]
+
 
 	def __splashscreen(self, window: pygame.Surface, events: list[pygame.event.Event]):
 		pass
 
+	@staticmethod
+	def __build_ui(window: pygame.Surface):
+		"""Les parametres et les positions des dashboards du UI design"""
+		largeur, hauteur = window.get_size()
+		espace_marge =	1/50 #Espace de marge vide entre les dashboard et les bouttons
+		longueur_sous_fenetre = (1-espace_marge*4)/3 #la largeur des dashboards et des bouttons sous le canvas de dessins
+		hauteur_sous_fenetre = (1-0.6-espace_marge*3) #l'hauteur total du dashboard sous le canvas de dessins
+		hauteur_sous_fenetre_bouton = (hauteur_sous_fenetre-espace_marge*2)/3 #hauteur de chaque bouton
+		hauteur_fenetre_predire = hauteur_sous_fenetre - hauteur_sous_fenetre_bouton - espace_marge #hauteur du dashboard prediction
+
+		def rect(x,y,larg,haut): #dessiner
+					return pygame.Rect(round(x*largeur),round(y*hauteur),round(larg*largeur),round(haut*hauteur))
+
+		#position des dashboards 
+		fenetre_pos = {
+			"canvas_dessin": rect(espace_marge, espace_marge, 1-espace_marge*2, 0.6),
+			"graphe": rect(espace_marge, espace_marge*2 + 0.6, longueur_sous_fenetre, hauteur_sous_fenetre),
+			"boutton_predire": rect(espace_marge*2 + longueur_sous_fenetre, espace_marge*2 + 0.6, longueur_sous_fenetre, hauteur_sous_fenetre_bouton),
+			"boutton_eff": rect(espace_marge*2 + longueur_sous_fenetre, espace_marge*3 + 0.6 + hauteur_sous_fenetre_bouton, longueur_sous_fenetre, hauteur_sous_fenetre_bouton),
+			"quitter": rect(espace_marge*2 + longueur_sous_fenetre, espace_marge*4 + 0.6 + hauteur_sous_fenetre_bouton*2, longueur_sous_fenetre, hauteur_sous_fenetre_bouton),
+			"predire": rect(espace_marge*3 + longueur_sous_fenetre*2, espace_marge*2 + 0.6, longueur_sous_fenetre, hauteur_fenetre_predire),
+			"historique": rect(espace_marge*3 + longueur_sous_fenetre*2, espace_marge*3 + 0.6 + hauteur_fenetre_predire, longueur_sous_fenetre, hauteur_sous_fenetre_bouton)
+		}
+
+		return fenetre_pos
+
+	@staticmethod
+	def __dessiner_UI(window: pygame.Surface, dict_fenetre, mouse_position, histoire): 
+		"""Dessiner tous sur le window pygame"""
+		#parametre couleur
+		blanc = (255,255,255)
+		cyan = (82, 214, 244)
+		#parametre des textes
+		font = pygame.font.SysFont("Open Sans", 60)
+		font_petit = pygame.font.SysFont("Open Sans", 36)
+		textes = {
+			"boutton_predire": "Prédire",
+			"boutton_eff": "Effacer",
+			"quitter": "Quitter"
+		}
+
+		#Dessiner ou le backgound du windows
+		window.fill((23, 35, 61, 255))
+
+		#Le canvas de dessins
+		pygame.draw.rect(window, (255,255,255), dict_fenetre["canvas_dessin"], border_radius= 12)
+
+		#Assigner tous les positions d'interface humaine (boutons)
+		for items in dict_fenetre: #Change color depending if mouse if hover or not on the specific buttons
+			if items == mouse_position: 
+				pygame.draw.rect(window, blanc, dict_fenetre[items], width=2, border_radius=12) 
+			else:
+				pygame.draw.rect(window, cyan, dict_fenetre[items], width=2, border_radius=12) 
+
+		#Assigner tous les positions des textes
+		for nom in textes: #Same thing here about color changes
+			if nom == mouse_position:
+				ecrire = font.render(textes[nom], True, blanc)
+				window.blit(ecrire, ecrire.get_rect(center=dict_fenetre[nom].center))
+			else:
+				ecrire = font.render(textes[nom], True, cyan)
+				window.blit(ecrire, ecrire.get_rect(center=dict_fenetre[nom].center))
+
+		#Texte d'historique des predictions
+		tous_lettres = " ".join(str(lettre) for lettre in histoire[-6:])
+		text_histoire = font_petit.render(" " + tous_lettres, True, cyan)
+		position_hist = dict_fenetre["historique"]
+		window.blit(text_histoire, text_histoire.get_rect(midleft=(position_hist.left, position_hist.centery)))
+
+		#Texte du titre de la case de prediction
+		text_prediction = font_petit.render("Votre lettre est", True, cyan)
+		position_prediction = dict_fenetre["predire"]
+		window.blit(text_prediction, text_prediction.get_rect(midtop= (position_prediction.centerx, position_prediction.top + 10)))
+
+		#Texte du lettre predit
+		Lettre_predic = "".join(str(lettre) for lettre in histoire[-1]) if histoire else None
+		text_predire = font.render(Lettre_predic, True, cyan)
+		position_pred = dict_fenetre["predire"]
+		window.blit(text_predire, text_predire.get_rect(center=position_pred.center))
+		
 	def __main(self, window: pygame.Surface, events: list[pygame.event.Event]):
-		pass
+		"""Real Interface to present to the public"""
+		#Parametre et settings
+		refresh_screen = False
+		dict_fenetre = self.__build_ui(window)
+		canvas_dessin = dict_fenetre["canvas_dessin"]
+		selected_button = None
+
+		#Detecter la position de souris et change le couleur du case si la sourie est dedant
+		pos_souris = pygame.mouse.get_pos()
+		for item in ("boutton_predire","boutton_eff","quitter"):
+			if dict_fenetre[item].collidepoint(pos_souris):
+				selected_button = item
+				refresh_screen = True
+				break
+			else:
+				selected_button = None
+				refresh_screen = True
+
+		###Registering drawing###
+		dessiner = pygame.mouse.get_pressed()[0] and canvas_dessin.collidepoint(pygame.mouse.get_pos())
+		if dessiner:
+
+			# create a new line array if new mousedown
+			if not self._globals['previously_mousedown']:
+				self.scenes_main['main']['drawn_pixels'].append([])
+
+			# create an easy-access reference to the line array
+			line = self.scenes_main['main']['drawn_pixels'][-1]
+
+			# register the pixel if the distance is greater than the minimum required
+			if not len(line) or math.dist(pygame.mouse.get_pos(), line[-1]) > self.scenes_main['main']['MIN_PIXELS_DISTANCE']:
+				line.append(pygame.mouse.get_pos())
+				refresh_screen = True
+
+
+		###Les boutons###
+		#Validation du dessin
+		elif any(e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 for e in events) and dict_fenetre["boutton_predire"].collidepoint(pos_souris) and any(self.scenes_main['main']['drawn_pixels']):
+			transparency_matrix = pygame.surfarray.array_alpha(window.subsurface(canvas_dessin))
+			prediction = predictionPipeline.predict(transparency_matrix)
+			self.history.append(prediction)
+
+			self.scenes_main['main']['drawn_pixels'].clear()
+			refresh_screen = True
+
+		#Effacer le canvas de dessin sans valider
+		elif any(e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 for e in events) and dict_fenetre["boutton_eff"].collidepoint(pos_souris):
+			self.scenes_main['main']['drawn_pixels'].clear()
+			refresh_screen = True
+
+		#Quitter l"interface
+		elif any(e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 for e in events) and dict_fenetre["quitter"].collidepoint(pos_souris):
+			raise SystemExit("exiting")
+
+		###Reset l'ecran / Update l'ecran###
+		if refresh_screen:
+			#Dessiner / Redessiner le UI
+			self.__dessiner_UI(window, dict_fenetre, selected_button, self.history)
+
+			#Refresh le canvas de dessin.
+			for line in self.scenes_main['main']['drawn_pixels']:
+				for coords in line:
+					window.set_clip(canvas_dessin) #Ne pas dessiner en dehors de la case a dessin
+					window.blit(self.scenes_main['main']['pencil'], coords)
+					window.set_clip(None)
+
+		self._globals['previously_mousedown'] = dessiner
 
 	def __sandbox(self, window: pygame.Surface, events: list[pygame.event.Event]):
 		'''For internal testing and debugging purposes only.'''
