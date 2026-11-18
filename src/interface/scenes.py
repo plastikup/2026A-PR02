@@ -1,4 +1,5 @@
 import math
+import sys
 from typing import get_args
 
 import pygame
@@ -36,7 +37,6 @@ class Scenes:
 			'previously_mousedown': False
 		}
 		self._scenes = {
-			'splashscreen': self.__splashscreen,
 			'main': self.__main,
 			'sandbox': self.__sandbox,
 			"view_dataset": self.__view_dataset
@@ -48,13 +48,10 @@ class Scenes:
 				'drawn_pixels': [],
 				'pencil': generate_fake_pencil_surface(5)
 			},
-			"view_dataset": {
-			}
-		}
-		self.scenes_main = {
 			'main': {
 				'MIN_PIXELS_DISTANCE': 1,
 				'drawn_pixels': [],
+				'ui': None,
 				'pencil': generate_fake_pencil_surface(50)
 			},
 			"view_dataset": {
@@ -76,12 +73,9 @@ class Scenes:
 
 		# clear ephemeral flags and update globals
 		self._switched_scene = False
-	
+
 		#self._globals['previously_mousedown'] = pygame.mouse.get_pressed()[0]
 
-
-	def __splashscreen(self, window: pygame.Surface, events: list[pygame.event.Event]):
-		pass
 
 	@staticmethod
 	def __build_ui(window: pygame.Surface):
@@ -96,7 +90,7 @@ class Scenes:
 		def rect(x,y,larg,haut): #dessiner
 					return pygame.Rect(round(x*largeur),round(y*hauteur),round(larg*largeur),round(haut*hauteur))
 
-		#position des dashboards 
+		#position des dashboards
 		fenetre_pos = {
 			"canvas_dessin": rect(espace_marge, espace_marge, 1-espace_marge*2, 0.6),
 			"graphe": rect(espace_marge, espace_marge*2 + 0.6, longueur_sous_fenetre, hauteur_sous_fenetre),
@@ -110,7 +104,7 @@ class Scenes:
 		return fenetre_pos
 
 	@staticmethod
-	def __dessiner_UI(window: pygame.Surface, dict_fenetre, mouse_position, histoire): 
+	def __dessiner_UI(window: pygame.Surface, dict_fenetre, mouse_position, histoire):
 		"""Dessiner tous sur le window pygame"""
 		#parametre couleur
 		blanc = (255,255,255)
@@ -132,10 +126,10 @@ class Scenes:
 
 		#Assigner tous les positions d'interface humaine (boutons)
 		for items in dict_fenetre: #Change color depending if mouse if hover or not on the specific buttons
-			if items == mouse_position: 
-				pygame.draw.rect(window, blanc, dict_fenetre[items], width=2, border_radius=12) 
+			if items == mouse_position:
+				pygame.draw.rect(window, blanc, dict_fenetre[items], width=2, border_radius=12)
 			else:
-				pygame.draw.rect(window, cyan, dict_fenetre[items], width=2, border_radius=12) 
+				pygame.draw.rect(window, cyan, dict_fenetre[items], width=2, border_radius=12)
 
 		#Assigner tous les positions des textes
 		for nom in textes: #Same thing here about color changes
@@ -162,75 +156,72 @@ class Scenes:
 		text_predire = font.render(Lettre_predic, True, cyan)
 		position_pred = dict_fenetre["predire"]
 		window.blit(text_predire, text_predire.get_rect(center=position_pred.center))
-		
+
+
 	def __main(self, window: pygame.Surface, events: list[pygame.event.Event]):
 		"""Real Interface to present to the public"""
 		#Parametre et settings
-		refresh_screen = False
-		dict_fenetre = self.__build_ui(window)
-		canvas_dessin = dict_fenetre["canvas_dessin"]
 		selected_button = None
+		data = self.scenes_data['main']
+
+		# update ui objs
+		if data['ui'] == None: data['ui'] = self.__build_ui(window)
 
 		#Detecter la position de souris et change le couleur du case si la sourie est dedant
 		pos_souris = pygame.mouse.get_pos()
 		for item in ("boutton_predire","boutton_eff","quitter"):
-			if dict_fenetre[item].collidepoint(pos_souris):
+			if data['ui'][item].collidepoint(pos_souris):
 				selected_button = item
-				refresh_screen = True
 				break
-			else:
-				selected_button = None
-				refresh_screen = True
 
 		###Registering drawing###
-		dessiner = pygame.mouse.get_pressed()[0] and canvas_dessin.collidepoint(pygame.mouse.get_pos())
+		mousedown = any(e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 for e in events)
+		dessiner = pygame.mouse.get_pressed()[0] and data['ui']["canvas_dessin"].collidepoint(pygame.mouse.get_pos())
+		predict = mousedown and data['ui']["boutton_predire"].collidepoint(pos_souris) and any(self.scenes_data['main']['drawn_pixels'])
+		erase = mousedown and data['ui']["boutton_eff"].collidepoint(pos_souris)
+		quit = mousedown and data['ui']["quitter"].collidepoint(pos_souris)
 		if dessiner:
-
 			# create a new line array if new mousedown
 			if not self._globals['previously_mousedown']:
-				self.scenes_main['main']['drawn_pixels'].append([])
+				self.scenes_data['main']['drawn_pixels'].append([])
 
 			# create an easy-access reference to the line array
-			line = self.scenes_main['main']['drawn_pixels'][-1]
+			line = self.scenes_data['main']['drawn_pixels'][-1]
 
 			# register the pixel if the distance is greater than the minimum required
-			if not len(line) or math.dist(pygame.mouse.get_pos(), line[-1]) > self.scenes_main['main']['MIN_PIXELS_DISTANCE']:
+			if not len(line) or math.dist(pygame.mouse.get_pos(), line[-1]) > self.scenes_data['main']['MIN_PIXELS_DISTANCE']:
 				line.append(pygame.mouse.get_pos())
-				refresh_screen = True
 
 
 		###Les boutons###
 		#Validation du dessin
-		elif any(e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 for e in events) and dict_fenetre["boutton_predire"].collidepoint(pos_souris) and any(self.scenes_main['main']['drawn_pixels']):
-			transparency_matrix = pygame.surfarray.array_alpha(window.subsurface(canvas_dessin))
+		elif predict:
+			transparency_matrix = pygame.surfarray.array_alpha(window.subsurface(data['ui']["canvas_dessin"]))
 			prediction = predictionPipeline.predict(transparency_matrix)
 			self.history.append(prediction)
 
-			self.scenes_main['main']['drawn_pixels'].clear()
-			refresh_screen = True
+			self.scenes_data['main']['drawn_pixels'].clear()
 
 		#Effacer le canvas de dessin sans valider
-		elif any(e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 for e in events) and dict_fenetre["boutton_eff"].collidepoint(pos_souris):
-			self.scenes_main['main']['drawn_pixels'].clear()
-			refresh_screen = True
+		elif erase:
+			self.scenes_data['main']['drawn_pixels'].clear()
 
 		#Quitter l"interface
-		elif any(e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 for e in events) and dict_fenetre["quitter"].collidepoint(pos_souris):
-			raise SystemExit("exiting")
+		elif quit:
+			sys.exit(0)
 
 		###Reset l'ecran / Update l'ecran###
-		if refresh_screen:
-			#Dessiner / Redessiner le UI
-			self.__dessiner_UI(window, dict_fenetre, selected_button, self.history)
+		self.__dessiner_UI(window, data['ui'], selected_button, self.history)
 
-			#Refresh le canvas de dessin.
-			for line in self.scenes_main['main']['drawn_pixels']:
-				for coords in line:
-					window.set_clip(canvas_dessin) #Ne pas dessiner en dehors de la case a dessin
-					window.blit(self.scenes_main['main']['pencil'], coords)
-					window.set_clip(None)
+		#Refresh le canvas de dessin.
+		for line in self.scenes_data['main']['drawn_pixels']:
+			for coords in line:
+				window.set_clip(data['ui']["canvas_dessin"]) #Ne pas dessiner en dehors de la case a dessin
+				window.blit(self.scenes_data['main']['pencil'], coords)
+				window.set_clip(None)
 
 		self._globals['previously_mousedown'] = dessiner
+
 
 	def __sandbox(self, window: pygame.Surface, events: list[pygame.event.Event]):
 		'''For internal testing and debugging purposes only.'''
@@ -265,6 +256,7 @@ class Scenes:
 			for line in self.scenes_data['sandbox']['drawn_pixels']:
 				for coords in line:
 					window.blit(self.scenes_data['sandbox']['pencil'], coords)
+
 
 	def __view_dataset(self, window: pygame.Surface, events: list[pygame.event.Event]):
 		'''Viewing the dataset for testing purposes with LEFT/RIGHT arrow keys.'''

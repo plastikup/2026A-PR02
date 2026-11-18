@@ -25,7 +25,7 @@ def ui() -> None:
 		#* update screen
 		scenes.refresh_animation_frame(window, events)
 		pygame.display.flip()
-		clock.tick(180)
+		clock.tick(60)
 
 		#* exit if applicable
 		if pygame.QUIT in tuple(e.type for e in events): break
