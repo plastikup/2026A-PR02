@@ -24,7 +24,7 @@ def train() -> None:
 
     print('Training model...')
     clf = MLPClassifier(
-        hidden_layer_sizes=(512, 256),
+        hidden_layer_sizes=(768, 384),
         activation='tanh',
         solver='adam',
         max_iter=500,

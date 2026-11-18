@@ -48,10 +48,10 @@ class Scenes:
 				'pencil': generate_fake_pencil_surface(4)
 			},
 			'main': {
-				'MIN_PIXELS_DISTANCE': 1,
+				'MIN_PIXELS_DISTANCE': 8,
 				'drawn_pixels': [],
 				'ui': None,
-				'pencil': generate_fake_pencil_surface(50)
+				'pencil': generate_fake_pencil_surface(80)
 			},
 			"view_dataset": {
 			}
@@ -175,21 +175,22 @@ class Scenes:
 
 		###Registering drawing###
 		mousedown = any(e.type == pygame.MOUSEBUTTONDOWN and e.button == 1 for e in events)
-		dessiner = pygame.mouse.get_pressed()[0] and data['ui']["canvas_dessin"].collidepoint(pygame.mouse.get_pos())
-		predict = mousedown and data['ui']["boutton_predire"].collidepoint(pos_souris) and any(self.scenes_data['main']['drawn_pixels'])
+		dessiner = pygame.mouse.get_pressed()[0] and data['ui']["canvas_dessin"].collidepoint(pos_souris)
+		predict = mousedown and data['ui']["boutton_predire"].collidepoint(pos_souris) and any(data['drawn_pixels'])
 		erase = mousedown and data['ui']["boutton_eff"].collidepoint(pos_souris)
 		quit = mousedown and data['ui']["quitter"].collidepoint(pos_souris)
 		if dessiner:
 			# create a new line array if new mousedown
 			if not self._globals['previously_mousedown']:
-				self.scenes_data['main']['drawn_pixels'].append([])
+				data['drawn_pixels'].append([])
 
 			# create an easy-access reference to the line array
-			line = self.scenes_data['main']['drawn_pixels'][-1]
+			line = data['drawn_pixels'][-1]
 
 			# register the pixel if the distance is greater than the minimum required
-			if not len(line) or math.dist(pygame.mouse.get_pos(), line[-1]) > self.scenes_data['main']['MIN_PIXELS_DISTANCE']:
-				line.append(pygame.mouse.get_pos())
+			if not len(line) or math.dist(pos_souris, line[-1]) > data['MIN_PIXELS_DISTANCE']:
+				snapped_pos_souris = (round(pos_souris[0] / data['MIN_PIXELS_DISTANCE']) * data['MIN_PIXELS_DISTANCE'], round(pos_souris[1] / data['MIN_PIXELS_DISTANCE']) * data['MIN_PIXELS_DISTANCE'])
+				line.append(snapped_pos_souris)
 
 
 		###Les boutons###
@@ -201,11 +202,11 @@ class Scenes:
 			prediction = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[prediction_index[0]-1]
 
 			self.history.append(prediction)
-			self.scenes_data['main']['drawn_pixels'].clear()
+			data['drawn_pixels'].clear()
 
 		#Effacer le canvas de dessin sans valider
 		elif erase:
-			self.scenes_data['main']['drawn_pixels'].clear()
+			data['drawn_pixels'].clear()
 
 		#Quitter l"interface
 		elif quit:
@@ -215,10 +216,10 @@ class Scenes:
 		self.__dessiner_UI(window, data['ui'], selected_button, self.history)
 
 		#Refresh le canvas de dessin.
-		for line in self.scenes_data['main']['drawn_pixels']:
+		for line in data['drawn_pixels']:
 			for coords in line:
 				window.set_clip(data['ui']["canvas_dessin"]) #Ne pas dessiner en dehors de la case a dessin
-				window.blit(self.scenes_data['main']['pencil'], coords)
+				window.blit(data['pencil'], coords)
 				window.set_clip(None)
 
 		self._globals['previously_mousedown'] = dessiner

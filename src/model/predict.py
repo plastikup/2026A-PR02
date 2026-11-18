@@ -8,7 +8,7 @@ from constants import TRAINED_MODEL_PATH
 class PredictionPipeline:
 	def __init__(self):
 		self.model = joblib.load(TRAINED_MODEL_PATH)
-		self.pipe = [self.__transpose_matrix, self.__normalize_matrix, self.__center_to_subject]
+		self.pipe = [self.__crop_matrix, self.__transpose_matrix, self.__normalize_matrix, self.__center_to_subject]
 
 	def predict(self, rgb_matrix: np.ndarray) -> list[int]:
 		gray_matrix = np.dot(rgb_matrix, [0.299, 0.587, 0.114])
@@ -24,6 +24,9 @@ class PredictionPipeline:
 	def __debug(self, matrix: np.ndarray) -> None:
 		"""For internal usage only. Writes out a provided matrix."""
 		with open('out.txt', 'w') as f: f.write(' '.join(str(round(num, 1)) for num in matrix))
+
+	def __crop_matrix(self, matrix: np.ndarray) -> np.ndarray:
+		return matrix[10:-10, 10:-10]
 
 	def __transpose_matrix(self, matrix: np.ndarray) -> np.ndarray:
 		return matrix.T
@@ -44,8 +47,8 @@ class PredictionPipeline:
 
 		#Grandire la bordure pour que le dession etre au centre
 		haut, larg = dessin_sans_bord.shape
-		expand_border_vert = round(haut*0.20) #Expand border par 20%
-		expand_border_hori = round(larg*0.20)
+		expand_border_vert = round(haut*0.15) #Expand border par 15%
+		expand_border_hori = round(larg*0.15)
 		dessin_avec_bord = np.pad(dessin_sans_bord, ((expand_border_vert,expand_border_vert),(expand_border_hori,expand_border_hori)), constant_values=1)
 
 		#Reajust Drawing with Border to the window size
