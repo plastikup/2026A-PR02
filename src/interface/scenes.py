@@ -8,7 +8,6 @@ from constants import DATASET_PATH
 from customTypes import ScenesNames
 from model.datasetManager import DatasetManager
 from model.predict import PredictionPipeline
-from utils.coordsToMatrix import coords_to_matrix
 
 predictionPipeline = PredictionPipeline()
 
@@ -46,7 +45,7 @@ class Scenes:
 			'sandbox': {
 				'MIN_PIXELS_DISTANCE': 1,
 				'drawn_pixels': [],
-				'pencil': generate_fake_pencil_surface(5)
+				'pencil': generate_fake_pencil_surface(4)
 			},
 			'main': {
 				'MIN_PIXELS_DISTANCE': 1,
@@ -92,7 +91,7 @@ class Scenes:
 
 		#position des dashboards
 		fenetre_pos = {
-			"canvas_dessin": rect(espace_marge, espace_marge, 1-espace_marge*2, 0.6),
+			"canvas_dessin": rect(espace_marge, espace_marge, (1-espace_marge*2), 0.6),
 			"graphe": rect(espace_marge, espace_marge*2 + 0.6, longueur_sous_fenetre, hauteur_sous_fenetre),
 			"boutton_predire": rect(espace_marge*2 + longueur_sous_fenetre, espace_marge*2 + 0.6, longueur_sous_fenetre, hauteur_sous_fenetre_bouton),
 			"boutton_eff": rect(espace_marge*2 + longueur_sous_fenetre, espace_marge*3 + 0.6 + hauteur_sous_fenetre_bouton, longueur_sous_fenetre, hauteur_sous_fenetre_bouton),
@@ -196,10 +195,12 @@ class Scenes:
 		###Les boutons###
 		#Validation du dessin
 		elif predict:
-			transparency_matrix = pygame.surfarray.array_alpha(window.subsurface(data['ui']["canvas_dessin"]))
-			prediction = predictionPipeline.predict(transparency_matrix)
-			self.history.append(prediction)
+			rgb_matrix = pygame.surfarray.pixels3d(window.subsurface(data['ui']["canvas_dessin"]))
+			prediction_index = predictionPipeline.predict(rgb_matrix)
+			del rgb_matrix # pygame locks surface unless explicitly deleting reference
+			prediction = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[prediction_index[0]-1]
 
+			self.history.append(prediction)
 			self.scenes_data['main']['drawn_pixels'].clear()
 
 		#Effacer le canvas de dessin sans valider
@@ -243,9 +244,16 @@ class Scenes:
 
 		# submitting
 		elif any(e.type == pygame.KEYDOWN and e.key == pygame.K_RETURN for e in events):
-			transparency_matrix = pygame.surfarray.array_alpha(window)
-			prediction = predictionPipeline.predict(transparency_matrix)
-			print(prediction)
+			rgb_matrix = pygame.surfarray.pixels3d(window)
+			prediction = predictionPipeline.predict(rgb_matrix)
+			del rgb_matrix # pygame locks surface unless explicitly deleting reference
+			print('ABCDEFGHIJKLMNOPQRSTUVWXYZ'[prediction[0]-1])
+			# data = predictionPipeline.predict(rgb_matrix)
+			# del rgb_matrix # pygame locks surface unless explicitly deleting reference
+			# with open('out.txt', 'w') as f: f.write('\n'.join(' '.join(str(round(num, 1)) for num in line) for line in data))
+			# self.scenes_data['view_dataset']['dataset'] = data
+			# self.scenes_data['view_dataset']['posligne'] = 0
+			# self.__view_dataset(window, events)
 
 			self.scenes_data['sandbox']['drawn_pixels'].clear()
 			refresh_screen = True
