@@ -7,6 +7,7 @@ import pygame
 
 from constants import DATASET_PATH, HISTORIQUE
 from customTypes import ScenesNames
+from interface.graph import create_best_predictions_graph
 from model.datasetManager import DatasetManager
 from model.predict import PredictionPipeline
 
@@ -69,7 +70,8 @@ class Scenes:
 				'drawn_pixels': [],
 				'ui': None,
 				'pencil': generate_fake_pencil_surface(80),
-				"est_vide": False
+				"est_vide": False,
+				"plt": None,
 			},
 			"view_dataset": {
 			}
@@ -228,11 +230,12 @@ class Scenes:
 		#Validation du dessin
 		elif predict:
 			rgb_matrix = pygame.surfarray.pixels3d(window.subsurface(data['ui']["canvas_dessin"]))
-			prediction_index = predictionPipeline.predict(rgb_matrix)
+			predictions = predictionPipeline.predict(rgb_matrix)
 			del rgb_matrix # pygame locks surface unless explicitly deleting reference
-			prediction = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[prediction_index[0]-1]
 
-			save_history(prediction)
+			data['plt'] = create_best_predictions_graph(predictions, data['ui']['graphe'])
+
+			save_history(predictions[0][0])
 			data['drawn_pixels'].clear()
 
 		#Message d'erreur quand l'utilisateur valide le dessin vide
@@ -256,6 +259,9 @@ class Scenes:
 				window.set_clip(data['ui']["canvas_dessin"]) #Ne pas dessiner en dehors de la case a dessin
 				window.blit(data['pencil'], coords)
 				window.set_clip(None)
+
+		# display the matplotlib graph
+		if data['plt']: window.blit(data['plt'], data['ui']['graphe'])
 
 		self._globals['previously_mousedown'] = dessiner
 

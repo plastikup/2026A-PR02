@@ -10,15 +10,14 @@ class PredictionPipeline:
 		self.model = joblib.load(TRAINED_MODEL_PATH)
 		self.pipe = [self.__crop_matrix, self.__transpose_matrix, self.__normalize_matrix, self.__center_to_subject]
 
-	def predict(self, rgb_matrix: np.ndarray) -> list[int]:
+	def predict(self, rgb_matrix: np.ndarray) -> list[tuple[str, float]]:
 		gray_matrix = np.dot(rgb_matrix, [0.299, 0.587, 0.114])
 		data = gray_matrix
 		for fn in self.pipe:
 			data = fn(data)
 
 		data = data.reshape(1, -1)
-		print(*sorted(zip('ABCDEFGHIJKLMNOPQRSTUVWXYZ', *self.model.predict_proba(data).tolist()), key=lambda e: -e[1]))
-		predictions = self.model.predict(data)
+		predictions = sorted(zip('ABCDEFGHIJKLMNOPQRSTUVWXYZ', *self.model.predict_proba(data).tolist()), key=lambda e: -e[1])
 		return predictions
 
 	def __debug(self, matrix: np.ndarray) -> None:
