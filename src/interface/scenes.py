@@ -221,8 +221,12 @@ class Scenes:
 			line = data['drawn_pixels'][-1]
 
 			# register the pixel if the distance is greater than the minimum required
-			if not len(line) or math.dist(pos_souris, line[-1]) > data['MIN_PIXELS_DISTANCE']:
-				snapped_pos_souris = (round(pos_souris[0] / data['MIN_PIXELS_DISTANCE']) * data['MIN_PIXELS_DISTANCE'], round(pos_souris[1] / data['MIN_PIXELS_DISTANCE']) * data['MIN_PIXELS_DISTANCE'])
+			pencil_snap_offset = data['pencil'].get_width()
+			if not len(line) or math.dist((pos_souris[0]-pencil_snap_offset/2, pos_souris[1]-pencil_snap_offset/2), line[-1]) > data['MIN_PIXELS_DISTANCE']:
+				snapped_pos_souris = (
+					(round(pos_souris[0] / data['MIN_PIXELS_DISTANCE'])) * data['MIN_PIXELS_DISTANCE'] - pencil_snap_offset/2,
+					(round(pos_souris[1] / data['MIN_PIXELS_DISTANCE'])) * data['MIN_PIXELS_DISTANCE'] - pencil_snap_offset/2,
+				)
 				line.append(snapped_pos_souris)
 
 
