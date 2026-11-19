@@ -24,3 +24,4 @@
 	return cv2.resize(Dessin_avec_Bord.astype(np.float32), (30, 30), interpolation=cv2.INTER_AREA)
 	```
 - **11/19**: L'IA de Google Search a été utilisé pour générer le code qui transforme un matplotlib graph vers une surface pygame.
+- **11/19**: L'IA de Google Search a été utilisé pour générer le code qui ajoute des custom labels à l'axe des X du graphe d'exploration.
