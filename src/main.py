@@ -1,5 +1,6 @@
 from interface.ui import ui
 from model.train import train
+from tools.exploration_graph import generate_exploration_graph
 
 
 def bootstrap():
@@ -9,11 +10,13 @@ def bootstrap():
 	print(f'{cyan}Que souhaitez-vous faire?{reset}')
 	print(f"{cyan}(1){reset} Entrainer l'IA;")
 	print(f"{cyan}(2){reset} Ouvrir l'interface utilisateur;")
+	print(f"{cyan}(3){reset} Générer le graphe d'exploration;")
 
 	option = input(f'{cyan}Entrez le numéro, ou rien mettre pour 2: {reset}')
 
 	if option == '1': train()
 	elif option == '2' or option == '': ui()
+	elif option == '3': generate_exploration_graph()
 
 	print('exiting')
 
