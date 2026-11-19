@@ -1,10 +1,11 @@
 import math
 import sys
+import json
 from typing import get_args
 
 import pygame
 
-from constants import DATASET_PATH
+from constants import DATASET_PATH, HISTORIQUE
 from customTypes import ScenesNames
 from model.datasetManager import DatasetManager
 from model.predict import PredictionPipeline
@@ -26,12 +27,32 @@ def generate_fake_pencil_surface(size: int) -> pygame.Surface:
 			pencil.set_at((i, j), (0, 0, 0, alpha))
 	return pencil
 
+def load_history() -> list:
+	"""Open history file"""
+	try:
+		with open(HISTORIQUE, "r", encoding= "utf-8") as file:
+				return json.load(file)
+	except:
+		with open(HISTORIQUE, "w", encoding= "utf-8") as file:
+			json.dump([], file)
+		return []
+
+def save_history(lettre: str) -> None:
+	"""Dump list into history"""
+	existing_hist = load_history()
+	existing_hist.append(lettre)
+	with open(HISTORIQUE, "w", encoding= "utf-8") as file:
+		json.dump(existing_hist, file, indent=2, ensure_ascii=False)
+
+
+
+
+
 
 class Scenes:
 	def __init__(self):
 		self._scene = 'splashscreen'
 		self._switched_scene = True
-		self.history = []
 		self._globals = {
 			'previously_mousedown': False
 		}
@@ -51,7 +72,8 @@ class Scenes:
 				'MIN_PIXELS_DISTANCE': 1,
 				'drawn_pixels': [],
 				'ui': None,
-				'pencil': generate_fake_pencil_surface(50)
+				'pencil': generate_fake_pencil_surface(50),
+				"est_vide": False
 			},
 			"view_dataset": {
 			}
@@ -103,14 +125,17 @@ class Scenes:
 		return fenetre_pos
 
 	@staticmethod
-	def __dessiner_UI(window: pygame.Surface, dict_fenetre, mouse_position, histoire):
+	def __dessiner_UI(window: pygame.Surface, dict_fenetre: dict, mouse_position: str, Vide: bool) -> None:
 		"""Dessiner tous sur le window pygame"""
 		#parametre couleur
 		blanc = (255,255,255)
 		cyan = (82, 214, 244)
+		red = (255,0,0)
 		#parametre des textes
 		font = pygame.font.SysFont("Open Sans", 60)
 		font_petit = pygame.font.SysFont("Open Sans", 36)
+
+		history = load_history()
 		textes = {
 			"boutton_predire": "Prédire",
 			"boutton_eff": "Effacer",
@@ -126,21 +151,28 @@ class Scenes:
 		#Assigner tous les positions d'interface humaine (boutons)
 		for items in dict_fenetre: #Change color depending if mouse if hover or not on the specific buttons
 			if items == mouse_position:
-				pygame.draw.rect(window, blanc, dict_fenetre[items], width=2, border_radius=12)
+				if Vide and items == "boutton_predire":#Si la canvas de dessin est vide
+					pygame.draw.rect(window, red, dict_fenetre[items], width=2, border_radius=12)
+				else:
+					pygame.draw.rect(window, blanc, dict_fenetre[items], width=2, border_radius=12)
 			else:
 				pygame.draw.rect(window, cyan, dict_fenetre[items], width=2, border_radius=12)
 
 		#Assigner tous les positions des textes
 		for nom in textes: #Same thing here about color changes
 			if nom == mouse_position:
-				ecrire = font.render(textes[nom], True, blanc)
-				window.blit(ecrire, ecrire.get_rect(center=dict_fenetre[nom].center))
+				if Vide and nom == "boutton_predire":#same thing
+					ecrire = font_petit.render("Veuillez dessiner", True, red)
+					window.blit(ecrire, ecrire.get_rect(center=dict_fenetre[nom].center))
+				else:
+					ecrire = font.render(textes[nom], True, blanc)
+					window.blit(ecrire, ecrire.get_rect(center=dict_fenetre[nom].center))
 			else:
 				ecrire = font.render(textes[nom], True, cyan)
 				window.blit(ecrire, ecrire.get_rect(center=dict_fenetre[nom].center))
 
 		#Texte d'historique des predictions
-		tous_lettres = " ".join(str(lettre) for lettre in reversed(histoire[-7:]))
+		tous_lettres = " ".join(str(lettre) for lettre in reversed(history[-7:]))
 		text_histoire = font_petit.render(" Historique: " + tous_lettres, True, cyan)
 		position_hist = dict_fenetre["historique"]
 		window.blit(text_histoire, text_histoire.get_rect(midleft=(position_hist.left, position_hist.centery)))
@@ -151,7 +183,7 @@ class Scenes:
 		window.blit(text_prediction, text_prediction.get_rect(midtop= (position_prediction.centerx, position_prediction.top + 10)))
 
 		#Texte du lettre predit
-		Lettre_predic = "".join(str(lettre) for lettre in histoire[-1]) if histoire else None
+		Lettre_predic = "".join(str(lettre) for lettre in history[-1]) if history else None
 		text_predire = font.render(Lettre_predic, True, cyan)
 		position_pred = dict_fenetre["predire"]
 		window.blit(text_predire, text_predire.get_rect(center=position_pred.center))
@@ -179,7 +211,10 @@ class Scenes:
 		predict = mousedown and data['ui']["boutton_predire"].collidepoint(pos_souris) and any(self.scenes_data['main']['drawn_pixels'])
 		erase = mousedown and data['ui']["boutton_eff"].collidepoint(pos_souris)
 		quit = mousedown and data['ui']["quitter"].collidepoint(pos_souris)
-		if dessiner:
+		false_predict = mousedown and data['ui']["boutton_predire"].collidepoint(pos_souris) and not any(self.scenes_data['main']['drawn_pixels'])
+
+		if dessiner: 
+			data["est_vide"] = False #Reset le message d'erreur
 			# create a new line array if new mousedown
 			if not self._globals['previously_mousedown']:
 				self.scenes_data['main']['drawn_pixels'].append([])
@@ -200,8 +235,12 @@ class Scenes:
 			del rgb_matrix # pygame locks surface unless explicitly deleting reference
 			prediction = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[prediction_index[0]-1]
 
-			self.history.append(prediction)
+			save_history(prediction)
 			self.scenes_data['main']['drawn_pixels'].clear()
+
+		#Message d'erreur quand l'utilisateur valide le dessin vide
+		elif false_predict:
+			data["est_vide"] = True
 
 		#Effacer le canvas de dessin sans valider
 		elif erase:
@@ -212,7 +251,7 @@ class Scenes:
 			sys.exit(0)
 
 		###Reset l'ecran / Update l'ecran###
-		self.__dessiner_UI(window, data['ui'], selected_button, self.history)
+		self.__dessiner_UI(window, data['ui'], selected_button, data["est_vide"])
 
 		#Refresh le canvas de dessin.
 		for line in self.scenes_data['main']['drawn_pixels']:
@@ -222,7 +261,6 @@ class Scenes:
 				window.set_clip(None)
 
 		self._globals['previously_mousedown'] = dessiner
-
 
 	def __sandbox(self, window: pygame.Surface, events: list[pygame.event.Event]):
 		'''For internal testing and debugging purposes only.'''
