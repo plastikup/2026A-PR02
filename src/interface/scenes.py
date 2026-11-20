@@ -1,15 +1,23 @@
 import json
 import math
 import sys
+import os
 from typing import get_args
 
 import pygame
 
-from constants import DATASET_PATH, HISTORIQUE
+from constants import DATASET_PATH, HISTORIQUE, TRAINED_MODEL_PATH
 from customTypes import ScenesNames
 from interface.graph import create_best_predictions_graph
 from model.datasetManager import DatasetManager
 from model.predict import PredictionPipeline
+from model.train import train
+
+#if there's no trainted data file or it's empty
+if not os.path.exists(TRAINED_MODEL_PATH) or os.path.getsize(TRAINED_MODEL_PATH) == 0:
+	print("Aucun fichier de donnée d'entraînement trouvée, ou donnée d'entraînement vide.")
+	print("Débuter l'entraînement du modèle")
+	train()
 
 predictionPipeline = PredictionPipeline()
 
@@ -30,13 +38,13 @@ def generate_fake_pencil_surface(size: int) -> pygame.Surface:
 
 def load_history() -> list:
 	"""Open history file"""
-	try:
-		with open(HISTORIQUE, "r", encoding= "utf-8") as file:
-			return json.load(file)
-	except:
+	if not os.path.exists(HISTORIQUE):
 		with open(HISTORIQUE, "w", encoding= "utf-8") as file:
 			json.dump([], file)
 		return []
+
+	with open(HISTORIQUE, "r", encoding= "utf-8") as file:
+		return json.load(file)
 
 def save_history(lettre: str) -> None:
 	"""Dump list into history"""
@@ -44,7 +52,6 @@ def save_history(lettre: str) -> None:
 	existing_hist.append(lettre)
 	with open(HISTORIQUE, "w", encoding= "utf-8") as file:
 		json.dump(existing_hist, file, indent=2, ensure_ascii=False)
-
 
 class Scenes:
 	def __init__(self):
@@ -72,6 +79,7 @@ class Scenes:
 				'pencil': generate_fake_pencil_surface(80),
 				"est_vide": False,
 				"plt": None,
+				"just_launched": True,
 			},
 			"view_dataset": {
 			}
@@ -123,7 +131,7 @@ class Scenes:
 		return fenetre_pos
 
 	@staticmethod
-	def __dessiner_UI(window: pygame.Surface, dict_fenetre: dict, selected_button: str | None, Vide: bool) -> None:
+	def __dessiner_UI(window: pygame.Surface, dict_fenetre: dict, selected_button: str | None, vide: bool, just_launched: bool) -> None:
 		"""Dessiner tous sur le window pygame"""
 		#parametre couleur
 		blanc = (255,255,255)
@@ -149,7 +157,7 @@ class Scenes:
 		#Assigner tous les positions d'interface humaine (boutons)
 		for items in dict_fenetre: #Change color depending if mouse if hover or not on the specific buttons
 			if items == selected_button:
-				if Vide and items == "boutton_predire":#Si la canvas de dessin est vide
+				if vide and items == "boutton_predire":#Si la canvas de dessin est vide
 					pygame.draw.rect(window, red, dict_fenetre[items], width=2, border_radius=12)
 				else:
 					pygame.draw.rect(window, blanc, dict_fenetre[items], width=2, border_radius=12)
@@ -159,7 +167,7 @@ class Scenes:
 		#Assigner tous les positions des textes
 		for nom in textes: #Same thing here about color changes
 			if nom == selected_button:
-				if Vide and nom == "boutton_predire":#same thing
+				if vide and nom == "boutton_predire":#same thing
 					ecrire = font_petit.render("Veuillez dessiner", True, red)
 					window.blit(ecrire, ecrire.get_rect(center=dict_fenetre[nom].center))
 				else:
@@ -181,7 +189,10 @@ class Scenes:
 		window.blit(text_prediction, text_prediction.get_rect(midtop= (position_prediction.centerx, position_prediction.top + 10)))
 
 		#Texte du lettre predit
-		Lettre_predic = "".join(str(lettre) for lettre in history[-1]) if history else None
+		if just_launched: #Affiche rien quand l'utilisateur vient d'ouvrir le program et n'a encore rien dessier
+			Lettre_predic = " "
+		else:
+			Lettre_predic = "".join(str(lettre) for lettre in history[-1]) if history else None
 		text_predire = font.render(Lettre_predic, True, cyan)
 		position_pred = dict_fenetre["predire"]
 		window.blit(text_predire, text_predire.get_rect(center=position_pred.center))
@@ -240,6 +251,7 @@ class Scenes:
 			data['plt'] = create_best_predictions_graph(predictions, data['ui']['graphe'])
 
 			save_history(predictions[0][0])
+			data["just_launched"] = False #Prediction dashboard can show characters now
 			data['drawn_pixels'].clear()
 
 		#Message d'erreur quand l'utilisateur valide le dessin vide
@@ -255,7 +267,7 @@ class Scenes:
 			sys.exit(0)
 
 		###Reset l'ecran / Update l'ecran###
-		self.__dessiner_UI(window, data['ui'], selected_button, data["est_vide"])
+		self.__dessiner_UI(window, data['ui'], selected_button, data["est_vide"], data["just_launched"] )
 
 		#Refresh le canvas de dessin.
 		for line in data['drawn_pixels']:
