@@ -178,7 +178,7 @@ class Scenes:
 				window.blit(ecrire, ecrire.get_rect(center=dict_fenetre[nom].center))
 
 		#Texte d'historique des predictions
-		tous_lettres = " ".join(str(lettre) for lettre in reversed(history[-7:]))
+		tous_lettres = " ".join(str(lettre) for lettre in reversed(history[-6:]))
 		text_histoire = font_petit.render(" Historique: " + tous_lettres, True, cyan)
 		position_hist = dict_fenetre["historique"]
 		window.blit(text_histoire, text_histoire.get_rect(midleft=(position_hist.left, position_hist.centery)))
